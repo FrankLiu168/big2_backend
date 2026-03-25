@@ -1,0 +1,23 @@
+1.websocket 
+用戶與伺服器
+2.Redis
+用戶認証
+3.Rabbit MQ
+Server端內部溝通
+4.Mysql
+遊戲紀錄
+
+[client] (websocket)-> [connector] (rabbit mq)-> [game room] (call)-> [game logic]
+
+
+1.用戶可以看遊戲紀錄
+2.用戶需登入後才能玩
+3.遊戲只有4桌，青龍、白虎、朱雀、玄武
+4.當桌裡所有玩家按下準備後即開局，若有空位則AI代打
+5.每玩完一局跳回桌位畫面，等候玩家準備
+
+
+後端
+Connector [用戶連線]
+Room [房號，例如青龍]
+Logic [實際遊戲邏輯]
