@@ -1,0 +1,18 @@
+# [mysql]
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=gin_gorm_demo
+
+
+# [redis]
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD="super_secret_password_123!"
+
+# [rabbitmq]
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=guest
