@@ -20,10 +20,10 @@ func LoggerMiddleware() gin.HandlerFunc {
 
 		// 在生產環境中，這裡應該接入 zap 或 logrus 等日誌庫
 		gin.DefaultWriter.Write([]byte(
-			"[GIN] " + fmt.Sprint(statusCode) + " | " + 
-			latency.String() + " | " + 
-			c.ClientIP() + " | " + 
-			c.Request.Method + " " + path + "?" + query + "\n",
+			"[GIN] " + fmt.Sprint(statusCode) + " | " +
+				latency.String() + " | " +
+				c.ClientIP() + " | " +
+				c.Request.Method + " " + path + "?" + query + "\n",
 		))
 	}
 }

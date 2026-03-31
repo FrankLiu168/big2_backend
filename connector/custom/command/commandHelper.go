@@ -28,11 +28,10 @@ func GetCommandName(message []byte) string {
 	return cmd.CommandName
 }
 
-var commandMap = map[string] any{
+var commandMap = map[string]any{
 	"say_all": &SayAllCommand{},
 	"say_to":  &SayToCommand{},
 }
-
 
 // GetCommand 重构版
 // 思路：根据 name 创建对应的具体类型指针，然后 Unmarshal 进去，最后断言转为 T
@@ -42,7 +41,7 @@ func GetCommand[T any](name string, message []byte) (*T, error) {
 	target, ok := commandMap[name]
 	if !ok {
 		return nil, ErrUnknownCommand
-	}	
+	}
 
 	if err := json.Unmarshal(message, target); err != nil {
 		return nil, err
@@ -55,11 +54,7 @@ func GetCommand[T any](name string, message []byte) (*T, error) {
 	return result, nil
 }
 
-
-
 var (
 	ErrUnknownCommand = errors.New("unknown command name")
 	ErrTypeMismatch   = errors.New("command type mismatch")
 )
-
-

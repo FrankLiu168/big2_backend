@@ -3,16 +3,13 @@ package connector
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"sync"
-	"time"
 
 	"big2backend/connector/common"
 	"big2backend/connector/custom"
-
+	"big2backend/shared/helper"
 	"github.com/gorilla/websocket"
-	"github.com/oklog/ulid/v2"
 )
 
 var upgrader = websocket.Upgrader{
@@ -76,8 +73,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
-	userID := getUniqueID()
+	userID := helper.GetUniqueID()
 
 	tunnel := &common.Tunnel{
 		HandleMessage:       custom.HandleMessage,
@@ -101,12 +97,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	go client.ReadPump()
 	go client.WritePump()
-}
-
-func getUniqueID() string {
-	entropy := ulid.Monotonic(rand.New(rand.NewSource(time.Now().UnixNano())), 0)
-	id, _ := ulid.New(ulid.Now(), entropy)
-	return id.String()
 }
 
 func checkAuth(r *http.Request) bool {

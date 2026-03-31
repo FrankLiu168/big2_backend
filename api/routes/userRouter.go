@@ -1,8 +1,9 @@
 package routes
 
 import (
-	"github.com/gin-gonic/gin"
 	"big2backend/api/modules"
+
+	"github.com/gin-gonic/gin"
 )
 
 func CreateUserRouters(r *gin.Engine) {
@@ -13,15 +14,14 @@ func CreateUserRouters(r *gin.Engine) {
 		{
 			// GET /api/v1/users?min_age=20
 			usersGroup.GET("/list", userModule.GetUsers)
-			
+
 			// POST /api/v1/users
 			usersGroup.POST("/add", userModule.CreateUser)
-			
+
 			// GET /api/v1/users/:id
 			usersGroup.GET("/get/:id", userModule.GetUser)
-			
+
 			// 可以在這裡添加更多路由，如 PUT, DELETE
 		}
 	}
 }
-

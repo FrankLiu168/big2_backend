@@ -48,11 +48,7 @@
 目前玩家手牌數
 {{PlayerHandCardCount}}
 ###
-當前桌面的牌由玩家[{{DesktopPlayerID}}]所出
-當前桌面牌為：{{DesktopCardType}}({{DesktopCards}})
-###
-目前這輪出牌情形
-{{PlayerActionInRound}}
+該局由你開始出牌，你可以出任意牌型
 *****
 ###
 歷史出牌
