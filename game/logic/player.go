@@ -5,6 +5,7 @@ import (
 	"big2backend/shared/data"
 	"big2backend/shared/helper"
 	"encoding/json"
+	"fmt"
 	"log"
 	"sort"
 )
@@ -13,14 +14,16 @@ type Player struct {
 	IsAI       bool
 	Identifier string
 	Info       *data.PlayerInfo
+	Transfer   *LogicTransferMQ
 }
 
-func NewPlayer(id int, name string, isAI bool) *Player {
+func NewPlayer(id int, name string, isAI bool, transfer *LogicTransferMQ) *Player {
 	info := data.NewPlayerInfo(id, name)
 	return &Player{
 		IsAI:       isAI,
 		Identifier: "",
 		Info:       info,
+		Transfer:   transfer,
 	}
 }
 
@@ -85,22 +88,48 @@ func (p *Player) GetLeftCardCount() int {
 	return len(p.Info.HandCards)
 }
 
+func (p *Player) DoStrategy(gameRecord *data.GameRecord) *data.PlayerAction {
+	msgID := helper.GetUniqueID()
+	reply, _ := helper.GetWorkHelper().MakeRequest(msgID, func() {
+		payload := data.CmdServerCurrentPlayer{
+			GameRecord: *gameRecord,
+			PlayerID:   p.Info.ID,
+		}
+		payloadStr, _ := helper.ConvertToData(&payload)
+		basePayload := data.BasePayload{
+			CommandAction: data.OnCmdServerCurrentPlayer,
+			Data:          payloadStr,
+		}
+		baseStr, _ := helper.ConvertToData(&basePayload)
+		routingKey := fmt.Sprintf(consts.CONNECTOR_RECEIVE_FROM_GAME_ROUTING_KEY+"%d", p.Info.ID)
+		p.Transfer.Publish(routingKey, baseStr, msgID)
+	})
+	action, _ := helper.ConvertToObject[data.CmdClientPlayerAction](reply.Payload)
+	replyAction := data.PlayerAction{
+		CardType: consts.CardType(action.CardType),
+		Cards:    action.Cards,
+		IsPass:   action.IsPass,
+		PlayerID: action.PlayerID,
+		Reason:   action.Reason,
+	}
+	return &replyAction
+}
+
 func (p *Player) Strategy(gameRecord *data.GameRecord) *data.PlayerAction {
 	wh := helper.GetWorkHelper()
 	msgID := helper.GetUniqueID()
-	reply,err := wh.MakeRequest(msgID,func() {
-		server := GetTransferServer()
+	reply, err := wh.MakeRequest(msgID, func() {
+		server := GetTransferMQ()
 		payload := data.AIPayloadRequest{
 			GameRecord: *gameRecord,
 			Info:       *p.Info,
 		}
 		payloadBytes, _ := json.Marshal(payload)
 		basePayload := data.BasePayload{
-			Command: 1,
-			Data:    string(payloadBytes),
+			Data: string(payloadBytes),
 		}
-		b,_ := json.Marshal(basePayload)
-		server.Publish(consts.AGENT_REQUEST_ROUTING_KEY, string(b), msgID)
+		b, _ := json.Marshal(basePayload)
+		server.Publish(consts.AGENT_RECEIVE_FROM_PLAYER_ROUTING_KEY, string(b), msgID)
 	})
 	if err != nil {
 		log.Println("Error:", err)
@@ -112,4 +141,14 @@ func (p *Player) Strategy(gameRecord *data.GameRecord) *data.PlayerAction {
 	_ = json.Unmarshal([]byte(baseRes.Data), &res)
 
 	return &res.Action
+}
+
+func (p *Player) SetCommand(command *data.BasePayload) {
+	if p.IsAI {
+		return
+	}
+	msgID := helper.GetUniqueID()
+	msg, _ := helper.ConvertToData(command)
+	routingKey := fmt.Sprintf(consts.PLAYER_RECEIVE_FROM_AI_ROUTING_KEY+"%d", p.Info.ID)
+	p.Transfer.Publish(routingKey, msg, msgID)
 }

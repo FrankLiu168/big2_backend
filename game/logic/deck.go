@@ -1,9 +1,10 @@
 package logic
 
 import (
-	"big2backend/shared/cardrule"
+	cardrule "big2backend/shared/cardRule"
 	"big2backend/shared/consts"
 	"big2backend/shared/data"
+	"big2backend/shared/helper"
 	"fmt"
 	"strings"
 
@@ -16,13 +17,17 @@ type Deck struct {
 	Players     []Player
 	PlayerChain *PlayerChain
 	GameRecord  *data.GameRecord
+	Checker     *cardrule.PlayerActionCheck
+	Transfer    *LogicTransferMQ
 }
 
-func (d *Deck) Init(players []Player) {
+func (d *Deck) Init(players []Player,transfer *LogicTransferMQ) {
 	d.Players = players
 	d.PlayerChain = NewPlayerChain(players)
 	d.InitAndShuffle()
 	d.GameRecord = data.NewGameRecord()
+	d.Checker = &cardrule.PlayerActionCheck{}
+	d.Transfer = transfer
 }
 
 func (d *Deck) InitAndShuffle() {
@@ -34,7 +39,6 @@ func (d *Deck) InitAndShuffle() {
 	}
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
 	r.Shuffle(len(d.Cards), func(i, j int) {
 		d.Cards[i], d.Cards[j] = d.Cards[j], d.Cards[i]
 	})
@@ -46,11 +50,17 @@ func (d *Deck) StartGame() {
 		s := i * 13
 		e := s + 13
 		p.SetHandCards(d.Cards[s:e])
-		//data.LogA(fmt.Sprintf("Player %d: %+v\n", i, p.GetHandCards()))
 		isStarter := p.FindStartCard()
 		if isStarter {
 			startPlayerID = p.Info.ID
 		}
+		payload := data.CmdServerDealCards{Cards: p.GetHandCards()}
+		payloadStr,_ := helper.ConvertToData(&payload)
+		basePayload := data.BasePayload{
+			CommandAction: data.OnCmdServerDealCards,
+			Data:          payloadStr,
+		}
+		p.SetCommand(&basePayload)
 	}
 	d.PlayerChain.SetStartPlayer(startPlayerID)
 	d.RoundStart()
@@ -71,15 +81,15 @@ func (d *Deck) RoundStart() {
 	}
 }
 
-func (d *Deck) getAllPlayerHandCards() string { 
+func (d *Deck) getAllPlayerHandCards() string {
 	list := []string{}
-	for _,player := range d.Players {
+	for _, player := range d.Players {
 		str := "玩家[%d]手牌為%+v"
 		handCardNames := consts.GetCardNameList(player.GetHandCards())
-		str = fmt.Sprintf(str,player.Info.ID,handCardNames)
-		list = append(list,str)
+		str = fmt.Sprintf(str, player.Info.ID, handCardNames)
+		list = append(list, str)
 	}
-	return strings.Join(list,"\n")
+	return strings.Join(list, "\n")
 }
 
 func (d *Deck) RoundLoop() bool {
@@ -92,15 +102,23 @@ func (d *Deck) RoundLoop() bool {
 			return false
 		}
 		data.LogA(fmt.Sprintf("當前玩家[%d]", player.Info.ID))
-		data.LogA(fmt.Sprintf("手牌 %+v",consts.GetCardNameList(player.GetHandCards())))
-		action := player.Strategy(d.GameRecord)
-		if !action.IsPass {
-			isOk, why := d.IsActionValid(d.GameRecord, action)
-			if !isOk {
-				data.LogA(why)
-				continue
+		data.LogA(fmt.Sprintf("手牌 %+v", consts.GetCardNameList(player.GetHandCards())))
+		var action *data.PlayerAction
+		if player.IsAI {
+			print("IsAI=TRUE")
+			action = player.Strategy(d.GameRecord)
+			if !action.IsPass {
+				isOk, why := d.Checker.IsActionValid(d.GameRecord, action, player.Info)
+				if !isOk {
+					data.LogA(why)
+					continue
+				}
 			}
+		} else {
+			print("IsAI=FALSE")
+			action = player.DoStrategy(d.GameRecord)
 		}
+
 		if action.IsPass {
 			data.LogA("策略：Pass")
 		} else {
@@ -109,7 +127,7 @@ func (d *Deck) RoundLoop() bool {
 			data.LogA(fmt.Sprintf("策略：%+v", cardNames))
 		}
 		data.LogA("策略說明：" + action.Reason)
-		
+
 		d.GameRecord.AddPlayerAction(*action)
 		if !action.IsPass {
 			d.GameRecord.DesktopPlayerAction = action
@@ -120,114 +138,8 @@ func (d *Deck) RoundLoop() bool {
 		if player.GetLeftCardCount() == 0 {
 			return true
 		}
-		
+
 		d.PlayerChain.Next()
 	}
 
-}
-
-func (d *Deck) IsActionValid(gameRecord *data.GameRecord, action *data.PlayerAction) (bool, string) {
-	flag := d.CheckCardType(action)
-	if !flag {
-		return false, "v未知牌型"
-	}
-	flag = d.CheckCardTypeWithCards(action)
-	if !flag {
-		return false, "v不符合牌型"
-	}
-	if gameRecord.DesktopPlayerAction != nil {
-		flag = d.CheckCardTypeWithDesktop(gameRecord, action)
-		if !flag {
-			return false, "v不符合桌面牌型"
-		}
-		currCardType := gameRecord.DesktopPlayerAction.CardType
-		currCards := gameRecord.DesktopPlayerAction.Cards
-		flag = d.CompareCards(currCardType, currCards, action)
-	}
-	return flag, "比桌面牌面小"
-}
-
-func (d *Deck) CheckCardType(action *data.PlayerAction) bool {
-	if action.CardType == consts.CARD_TYPE_UNKNOWN {
-		return false
-	}
-	return true
-}
-func (d *Deck) CheckCardTypeWithDesktop(gameRecord *data.GameRecord, action *data.PlayerAction) bool {
-	if gameRecord.CurrentRound.IsFirst {
-		return true
-	}
-	if action.CardType >= consts.CARD_TYPE_FOUR_OF_A_KIND && action.CardType >= gameRecord.DesktopPlayerAction.CardType {
-		return true
-	}
-	if gameRecord.DesktopPlayerAction.CardType != action.CardType {
-		return false
-	}
-	return true
-}
-
-func (d *Deck) CheckCardTypeWithCards(action *data.PlayerAction) bool {
-	switch action.CardType {
-	case consts.CARD_TYPE_STRAIGHT_FLUSH:
-		if !cardrule.IsStraightFlush(action.Cards) {
-			return false
-		}
-	case consts.CARD_TYPE_FOUR_OF_A_KIND:
-		if !cardrule.IsFourOfAKind(action.Cards) {
-			return false
-		}
-	case consts.CARD_TYPE_FULL_HOUSE:
-		if !cardrule.IsFullHouse(action.Cards) {
-			return false
-		}
-	case consts.CARD_TYPE_STRAIGHT:
-		if !cardrule.IsStraight(action.Cards) {
-			return false
-		}
-	case consts.CARD_TYPE_ONE_PAIR:
-		if !cardrule.IsPair(action.Cards) {
-			return false
-		}
-	case consts.CARD_TYPE_SINGLE:
-		if !cardrule.IsSingle(action.Cards) {
-			return false
-		}
-	}
-	return true
-}
-
-func (d *Deck) CompareCards(desktopCardType consts.CardType, desktopCards []int, action *data.PlayerAction) bool {
-	if action.CardType > desktopCardType && action.CardType >= consts.CARD_TYPE_FOUR_OF_A_KIND {
-		return true
-	}
-	switch desktopCardType {
-	case consts.CARD_TYPE_STRAIGHT_FLUSH:
-		return cardrule.CompareStraightFlush(desktopCards, action.Cards)
-	case consts.CARD_TYPE_FOUR_OF_A_KIND:
-		return cardrule.CompareFourOfAKind(desktopCards, action.Cards)
-	case consts.CARD_TYPE_FULL_HOUSE:
-		return cardrule.CompareFullHouse(desktopCards, action.Cards)
-	case consts.CARD_TYPE_STRAIGHT:
-		return cardrule.CompareStraight(desktopCards, action.Cards)
-	case consts.CARD_TYPE_ONE_PAIR:
-		return cardrule.ComparePair(desktopCards, action.Cards)
-	case consts.CARD_TYPE_SINGLE:
-		return cardrule.CompareSingle(desktopCards, action.Cards)
-	}
-	return false
-}
-
-func (d *Deck)CheckHandCards(action *data.PlayerAction, player *Player) bool { 
-	for _,card := range action.Cards {
-		isMatch := false
-		for _,handCard := range player.Info.HandCards {
-			if card == handCard {
-				isMatch = true
-			}
-			if !isMatch {
-				return false
-			}
-		}
-	}
-	return true
 }

@@ -94,7 +94,7 @@ func (c *Consumer) Close() error {
 
 // Listen 绑定 routing keys 并启动消费 goroutine
 // handler 用于处理每条消息（注意：若需 ACK，应关闭 autoAck 并在 handler 中手动确认）
-func (c *Consumer) Listen(bindingKeys []string, handler func(amqp091.Delivery)) error {
+func (c *Consumer) Listen(bindingKeys []string, handler func(*amqp091.Delivery)) error {
 	// 绑定所有 routing key patterns
 	for _, key := range bindingKeys {
 		err := c.ch.QueueBind(
@@ -127,7 +127,11 @@ func (c *Consumer) Listen(bindingKeys []string, handler func(amqp091.Delivery)) 
 	// 在 goroutine 中处理消息
 	go func() {
 		for d := range msgs {
-			handler(d)
+			print("\n-------------\n")
+			print(d.RoutingKey + "\n")
+			print(string(d.Body))
+			print("\n-------------\n")
+			handler(&d)
 		}
 		log.Println("Message channel closed. Consumer stopped.")
 	}()

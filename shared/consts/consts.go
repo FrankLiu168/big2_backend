@@ -5,7 +5,7 @@ type CardType int
 const (
 	CARD_TYPE_UNKNOWN  CardType = 0 //  未知
 	CARD_TYPE_SINGLE   CardType = 1 //  單張
-	CARD_TYPE_ONE_PAIR CardType = 2 //      IS_ONE_PAIR: "對子",
+	CARD_TYPE_ONE_PAIR CardType = 2 //  對子
 
 	CARD_TYPE_STRAIGHT       CardType = 3 //  順子
 	CARD_TYPE_FULL_HOUSE     CardType = 4 //  葫蘆

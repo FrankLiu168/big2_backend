@@ -39,16 +39,16 @@
 若為pass，也要說明策略原因
 請回傳必須只有json資料，且格式為：
 {
-  "IsPass": true,
-  "CardType": "",
-  "Cards": [],
-  "Reason": "就算是pass也要明確說明原因",
+  "isPass": true,
+  "cardType": "",
+  "cards": [],
+  "reason": "就算是pass也要明確說明原因",
 }
 ###
 回傳何式必須只有json資料，且格式為：
 {
-  	"IsPass": ture, //是否pass
-	  "CardType": "依牌型選擇若為Pass則填null", //"單張","對子","順子","葫蘆","鐵支","同花順"
-	  "Cards": ["梅花3","方塊3"], //實際出牌
-    "Reason": "為何出這些牌，請簡單50字內說明",
+  	"isPass": ture, //是否pass
+	"cardType": "依牌型選擇若為Pass則填null", //"單張","對子","順子","葫蘆","鐵支","同花順"
+	"cards": ["梅花3","方塊3"], //實際出牌
+   "reason": "為何出這些牌，請簡單50字內說明",
 }

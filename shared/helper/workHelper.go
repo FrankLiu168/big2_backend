@@ -28,21 +28,21 @@ type work struct {
 // WorkHelper
 // ====================
 
-type WorkHelper struct {
+type workHelper struct {
 	mu      sync.RWMutex
 	works   map[string]*work
 	timeout time.Duration // 預設 timeout
 }
 
-var workerHelperInstance *WorkHelper
+var workerHelperInstance *workHelper
 
 // 建立 Helper（帶預設 timeout）
-func GetWorkHelper() *WorkHelper {
+func GetWorkHelper() *workHelper {
 	if workerHelperInstance != nil {
 		return workerHelperInstance
 	}
 	timeout := 30 * time.Second
-	workerHelperInstance = &WorkHelper{
+	workerHelperInstance = &workHelper{
 		works:   make(map[string]*work),
 		timeout: timeout,
 	}
@@ -54,7 +54,7 @@ func GetWorkHelper() *WorkHelper {
 // ====================
 
 // MakeRequest 發起請求（使用預設 timeout）
-func (w *WorkHelper) MakeRequest(
+func (w *workHelper) MakeRequest(
 	msgID string,
 	job func(),
 ) (Reply, error) {
@@ -62,7 +62,7 @@ func (w *WorkHelper) MakeRequest(
 }
 
 // MakeRequestWithTimeout 可自訂 timeout
-func (w *WorkHelper) MakeRequestWithTimeout(
+func (w *workHelper) MakeRequestWithTimeout(
 	msgID string,
 	timeout time.Duration,
 	job func(),
@@ -114,7 +114,7 @@ func (w *WorkHelper) MakeRequestWithTimeout(
 // - delete → send（避免 race）
 // - 非阻塞
 // - 可重入（安全忽略不存在的 msgID）
-func (w *WorkHelper) Reply(msgID string, payload string) {
+func (w *workHelper) Reply(msgID string, payload string) {
 
 	w.mu.Lock()
 	wk, exists := w.works[msgID]
