@@ -21,3 +21,18 @@ Server端內部溝通
 Connector [用戶連線]
 Room [房號，例如青龍]
 Logic [實際遊戲邏輯]
+
+
+game--> player -[CONNECTOR_RECEIVE_FROM_GAME_ROUTING_KEY@CmdServerCurrentPlayer]-> connector
+connector -[AGENT_RECEIVE_FROM_CONNECT_ROUTING_KEY@AIPayloadRequest]-> agent
+agent -[CONNECTOR_RECEIVE_FROM_AGENT_ROUTING_KEY@AIPayloadResponse]-> connector
+connector -[GAME_RECEIVE_FROM_CONNECTOR_ROUTING_KEY@CmdServerCurrentPlayer]-> game
+
+agent_request
+agent_response
+
+game_request
+game_response
+
+
+

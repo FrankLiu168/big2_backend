@@ -90,10 +90,10 @@ func (a *Agent) Strategy(gameRecord *data.GameRecord, info *data.PlayerInfo) *da
 				Reason:   "API錯誤3次",
 			}
 		} else if len(replyList) > 0 {
-			print("\n---replylist----\n")
-			for _,s := range replyList {
-				print(s + "\n")
-			}
+			// print("\n---replylist----\n")
+			// for _,s := range replyList {
+			// 	print(s + "\n")
+			// }
 		}
 		reply, err := a.CallAIApi(prompt, replyList)
 		callCount += 1

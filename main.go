@@ -33,9 +33,9 @@ func testRabbitmq() {
 	pro, err := rabbitmq.NewProducer("ex1")
 	for i := 0; i < 10; i++ {
 		if i%2 == 0 {
-			pro.Publish("a01.b02", fmt.Sprintf("message %d", i), "aaaa")
+			pro.Publish("a01.b02", fmt.Sprintf("message %d", i), "aaaa","CCCC")
 		} else {
-			pro.Publish("a01.b01", fmt.Sprintf("message %d", i), "bbbb")
+			pro.Publish("a01.b01", fmt.Sprintf("message %d", i), "bbbb","DDDD")
 		}
 		time.Sleep(500 * time.Millisecond)
 	}

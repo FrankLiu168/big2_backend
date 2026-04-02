@@ -34,19 +34,43 @@ type workHelper struct {
 	timeout time.Duration // 預設 timeout
 }
 
-var workerHelperInstance *workHelper
+var agentWork *workHelper
+var gameWork *workHelper
+var connectorWork *workHelper
 
 // 建立 Helper（帶預設 timeout）
-func GetWorkHelper() *workHelper {
-	if workerHelperInstance != nil {
-		return workerHelperInstance
+
+func GetAgentWork() *workHelper {
+	if agentWork != nil {
+		return agentWork
 	}
-	timeout := 30 * time.Second
-	workerHelperInstance = &workHelper{
+	agentWork = newWorkHelper()
+	return agentWork
+}
+
+func GetGameWork() *workHelper {
+	if gameWork != nil {
+		return gameWork
+	}
+	gameWork = newWorkHelper()
+	return gameWork
+}
+
+func GetConnectorWork() *workHelper {
+	if connectorWork != nil {
+		return connectorWork
+	}
+	connectorWork = newWorkHelper()
+	return connectorWork
+}
+
+func newWorkHelper() *workHelper {
+	timeout := 20 * time.Second
+	work := &workHelper{
 		works:   make(map[string]*work),
 		timeout: timeout,
 	}
-	return workerHelperInstance
+	return work
 }
 
 // ====================

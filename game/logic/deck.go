@@ -18,10 +18,10 @@ type Deck struct {
 	PlayerChain *PlayerChain
 	GameRecord  *data.GameRecord
 	Checker     *cardrule.PlayerActionCheck
-	Transfer    *LogicTransferMQ
+	Transfer    *GameTransferMQ
 }
 
-func (d *Deck) Init(players []Player,transfer *LogicTransferMQ) {
+func (d *Deck) Init(players []Player,transfer *GameTransferMQ) {
 	d.Players = players
 	d.PlayerChain = NewPlayerChain(players)
 	d.InitAndShuffle()
@@ -105,7 +105,6 @@ func (d *Deck) RoundLoop() bool {
 		data.LogA(fmt.Sprintf("手牌 %+v", consts.GetCardNameList(player.GetHandCards())))
 		var action *data.PlayerAction
 		if player.IsAI {
-			print("IsAI=TRUE")
 			action = player.Strategy(d.GameRecord)
 			if !action.IsPass {
 				isOk, why := d.Checker.IsActionValid(d.GameRecord, action, player.Info)
@@ -115,7 +114,7 @@ func (d *Deck) RoundLoop() bool {
 				}
 			}
 		} else {
-			print("IsAI=FALSE")
+			data.LogD("不是AI","DoStrategy")
 			action = player.DoStrategy(d.GameRecord)
 		}
 

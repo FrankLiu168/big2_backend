@@ -75,8 +75,7 @@ func declareTopicExchange(ch *amqp091.Channel, exchangeName string) error {
 }
 
 // Publish 发布消息到已声明的 topic exchange
-func (p *Producer) Publish(routingKey, message, msgID string) error {
-	print("Publish [Routing Key:" + routingKey + "]")
+func (p *Producer) Publish(routingKey, message, msgID string, replyID string) error {
 	return p.ch.Publish(
 		p.exName, // 使用内部保存的 exchange name
 		routingKey,
@@ -86,6 +85,9 @@ func (p *Producer) Publish(routingKey, message, msgID string) error {
 			ContentType: "text/plain",
 			Body:        []byte(message),
 			MessageId:   msgID,
+			Headers: amqp091.Table{
+				"replyID": replyID,
+			},
 		},
 	)
 }

@@ -52,6 +52,7 @@ type CmdClientPlayerAction struct {
 	Reason   string          `json:"reason"`
 }
 
+
 type CmdServerPlayerAction struct {
 	PlayerID int             `json:"playerID"`
 	CardType consts.CardType `json:"cardType"`

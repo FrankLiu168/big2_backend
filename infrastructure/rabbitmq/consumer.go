@@ -127,10 +127,6 @@ func (c *Consumer) Listen(bindingKeys []string, handler func(*amqp091.Delivery))
 	// 在 goroutine 中处理消息
 	go func() {
 		for d := range msgs {
-			print("\n-------------\n")
-			print(d.RoutingKey + "\n")
-			print(string(d.Body))
-			print("\n-------------\n")
 			handler(&d)
 		}
 		log.Println("Message channel closed. Consumer stopped.")
