@@ -16,13 +16,16 @@ const (
 	OnCmdServerCurrentPlayer CommandAction = iota + 1
 	OnCmdServerDealCards
 	OnCmdClientPlayerAction
+	OnCmdClientReady
 	OnCmdServerPlayerAction
 	OnCmdServerGameOver
+	OnCmdServerNewRound
 )
 
 type BasePayload struct {
 	MainAction    MainAction    `json : "mainAction"`
 	CommandAction CommandAction `json : "command"`
+	Target        string        `json : "target"`
 	Data          string        `json : "data"`
 }
 
@@ -34,17 +37,30 @@ type AIPayloadRequest struct {
 type AIPayloadResponse struct {
 	Action PlayerAction `json : "action"`
 }
+type CmdServerNewRound struct {
+	RoundID  int `json:"roundID"`
+	TakeTime int `json:"takeTime"`
+}
+
+type CmdClientReady struct {
+	PlayerID int    `json:"playerID"`
+	ReplyID  string `json:"replyID"`
+}
 
 type CmdServerDealCards struct {
-	Cards []int `json:"cards"`
+	Cards    []int `json:"cards"`
+	TakeTime int   `json:"takeTime"`
 }
 
 type CmdServerCurrentPlayer struct {
-	GameRecord GameRecord `json:"gameRecord"`
-	PlayerID   int        `json:"playerID"`
+	//GameRecord GameRecord `json:"gameRecord"`
+	ReplyID  string `json:"replyID"`
+	PlayerID int    `json:"playerID"`
+	TakeTime int    `json:"takeTime"`
 }
 
 type CmdClientPlayerAction struct {
+	ReplyID  string          `json:"replyID"`
 	PlayerID int             `json:"playerID"`
 	IsPass   bool            `json:"isPass"`
 	CardType consts.CardType `json:"cardType"`
@@ -52,13 +68,15 @@ type CmdClientPlayerAction struct {
 	Reason   string          `json:"reason"`
 }
 
-
 type CmdServerPlayerAction struct {
 	PlayerID int             `json:"playerID"`
+	IsPass   bool            `json:"isPass"`
 	CardType consts.CardType `json:"cardType"`
 	Cards    []int           `json:"cards"`
+	TakeTime int             `json:"takeTime"`
 }
 
 type CmdServerGameOver struct {
-	Status map[int]int `json:"status"`
+	Status   map[int]int `json:"status"`
+	TakeTime int         `json:"takeTime"`
 }

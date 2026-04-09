@@ -1,4 +1,4 @@
-package connector
+package transfermq
 
 import (
 	"big2backend/shared/data"
@@ -18,8 +18,8 @@ func NewConnectorTransferAgentHelper(transfer *ConnectorTransferMQ) *ConnectorTr
 }
 
 func (c *ConnectorTransferAgentHelper) HandleConnectMessage(dev *amqp091.Delivery) {
-	data.LogD("Connector", "HandleConnectMessage")
-	payload, _ := helper.ConvertToObject[data.BasePayload](string(dev.Body))
+
+	payload := helper.ConvertToBasePayload(string(dev.Body))
 	switch payload.CommandAction {
 	case data.CommandAction(data.InAIPayloadResponse):
 		responseFromAgent(c.Transfer, dev)
@@ -27,7 +27,7 @@ func (c *ConnectorTransferAgentHelper) HandleConnectMessage(dev *amqp091.Deliver
 }
 
 func responseFromAgent(transfer *ConnectorTransferMQ, dev *amqp091.Delivery) {
-	data.LogD("Connector", "responseFromAgent")
+
 	replyID, isExist := dev.Headers["replyID"]
 	if isExist && replyID != "" {
 		helper.GetConnectorWork().Reply(replyID.(string), string(dev.Body))

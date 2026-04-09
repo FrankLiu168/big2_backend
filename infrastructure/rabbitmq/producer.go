@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"big2backend/shared/data"
 	"fmt"
 
 	"github.com/rabbitmq/amqp091-go"
@@ -76,6 +77,7 @@ func declareTopicExchange(ch *amqp091.Channel, exchangeName string) error {
 
 // Publish 发布消息到已声明的 topic exchange
 func (p *Producer) Publish(routingKey, message, msgID string, replyID string) error {
+	data.LogD("producer","publish",routingKey)
 	return p.ch.Publish(
 		p.exName, // 使用内部保存的 exchange name
 		routingKey,

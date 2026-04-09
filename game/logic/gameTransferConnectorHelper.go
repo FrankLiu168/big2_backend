@@ -12,23 +12,38 @@ type GameTransferConnectorHelper struct {
 }
 
 func NewGameTransferConnectorHelper(transfer *GameTransferMQ) *GameTransferConnectorHelper {
-    return &GameTransferConnectorHelper{
+	return &GameTransferConnectorHelper{
 		Transfer: transfer,
 	}
 }
 
-func (c *GameTransferConnectorHelper)HandleConnectMessage(dev *amqp091.Delivery) {
-	payload,_ := helper.ConvertToObject[data.BasePayload](string(dev.Body))
+func (c *GameTransferConnectorHelper) HandleConnectMessage(dev *amqp091.Delivery) {
+	payload := helper.ConvertToBasePayload(string(dev.Body))
+	data.LogD("GameTransferConnectorHelper",string(dev.Body))
 	switch payload.CommandAction {
 	case data.CommandAction(data.OnCmdClientPlayerAction):
-		responseFromConnector(c.Transfer,dev)
+		handleConnectorAction(c.Transfer, dev)
+	case data.OnCmdClientReady:
+		res := helper.ConvertToPayload[data.CmdClientReady](payload)
+		data.LogD("---unlock wait----",res.ReplyID)
+		helper.GetWaitHelper().Reply(res.ReplyID, string(dev.Body))
 	}
 }
 
-func responseFromConnector(transfer *GameTransferMQ,dev *amqp091.Delivery) {
-	replyID, isExist := dev.Headers["replyID"]
-	if isExist && replyID != "" {
-		helper.GetGameWork().Reply(replyID.(string), string(dev.Body))
+func handleConnectorAction(transfer *GameTransferMQ, dev *amqp091.Delivery) {
+	basePayload := helper.ConvertToBasePayload(string(dev.Body))
+	switch basePayload.CommandAction {
+	case data.OnCmdClientPlayerAction:
+		payload := helper.ConvertToPayload[data.CmdClientPlayerAction](basePayload)
+		replyID := payload.ReplyID
+		helper.GetWaitHelper().Reply(replyID, string(dev.Body))
 	}
+
 }
 
+// func responseFromConnector(transfer *GameTransferMQ,dev *amqp091.Delivery) {
+// 	replyID, isExist := dev.Headers["replyID"]
+// 	if isExist && replyID != "" {
+// 		helper.GetGameWork().Reply(replyID.(string), string(dev.Body))
+// 	}
+// }

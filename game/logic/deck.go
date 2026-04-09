@@ -21,7 +21,7 @@ type Deck struct {
 	Transfer    *GameTransferMQ
 }
 
-func (d *Deck) Init(players []Player,transfer *GameTransferMQ) {
+func (d *Deck) Init(players []Player, transfer *GameTransferMQ) {
 	d.Players = players
 	d.PlayerChain = NewPlayerChain(players)
 	d.InitAndShuffle()
@@ -45,6 +45,7 @@ func (d *Deck) InitAndShuffle() {
 }
 
 func (d *Deck) StartGame() {
+	helper.GetWaitHelper().WaitWithTimeout("12345", 100*time.Second)
 	startPlayerID := 0
 	for i, p := range d.Players {
 		s := i * 13
@@ -54,15 +55,9 @@ func (d *Deck) StartGame() {
 		if isStarter {
 			startPlayerID = p.Info.ID
 		}
-		payload := data.CmdServerDealCards{Cards: p.GetHandCards()}
-		payloadStr,_ := helper.ConvertToData(&payload)
-		basePayload := data.BasePayload{
-			CommandAction: data.OnCmdServerDealCards,
-			Data:          payloadStr,
-		}
-		p.SetCommand(&basePayload)
 	}
 	d.PlayerChain.SetStartPlayer(startPlayerID)
+	d.DoCmdServerDealCards()
 	d.RoundStart()
 }
 
@@ -70,6 +65,7 @@ func (d *Deck) RoundStart() {
 	isDone := false
 	for {
 		if isDone {
+			d.DoCmdServerGameOver()
 			data.LogA("遊戲結束")
 			data.LogA(d.getAllPlayerHandCards())
 			return
@@ -93,8 +89,8 @@ func (d *Deck) getAllPlayerHandCards() string {
 }
 
 func (d *Deck) RoundLoop() bool {
-	count := 0
 	data.LogA(fmt.Sprintf("當前[%d]輪", d.GameRecord.CurrentRound.RoundNo))
+	d.DoCmdServerNewRound()
 	for {
 		player := d.PlayerChain.GetCurrentPlayer()
 		if !d.GameRecord.CurrentRound.IsFirst && player.Info.ID == d.GameRecord.DesktopPlayerAction.PlayerID {
@@ -103,6 +99,9 @@ func (d *Deck) RoundLoop() bool {
 		}
 		data.LogA(fmt.Sprintf("當前玩家[%d]", player.Info.ID))
 		data.LogA(fmt.Sprintf("手牌 %+v", consts.GetCardNameList(player.GetHandCards())))
+		replyID := helper.GetUniqueID()
+		sleepTime := 50
+		d.DoCmdServerCurrentPlayer(player.Info.ID, replyID, sleepTime)
 		var action *data.PlayerAction
 		if player.IsAI {
 			action = player.Strategy(d.GameRecord)
@@ -114,9 +113,9 @@ func (d *Deck) RoundLoop() bool {
 				}
 			}
 		} else {
-			data.LogD("不是AI","DoStrategy")
-			action = player.DoStrategy(d.GameRecord)
+			action = player.DoStrategy(replyID, sleepTime)
 		}
+		d.DoCmdServerPlayerAction(action)
 
 		if action.IsPass {
 			data.LogA("策略：Pass")
@@ -132,7 +131,6 @@ func (d *Deck) RoundLoop() bool {
 			d.GameRecord.DesktopPlayerAction = action
 			d.GameRecord.CurrentRound.IsFirst = false
 			player.TakeOutHandCards(action.Cards)
-			count += 1
 		}
 		if player.GetLeftCardCount() == 0 {
 			return true
@@ -141,4 +139,107 @@ func (d *Deck) RoundLoop() bool {
 		d.PlayerChain.Next()
 	}
 
+}
+
+func (d *Deck) getTakeTime(s int) int {
+	futureTime := time.Now().Add(time.Duration(s) * time.Second)
+	return int(futureTime.Unix())
+}
+
+func (d *Deck) sendCommandToPlayers(basePayload *data.BasePayload) {
+	for _, player := range d.Players {
+		if player.IsAI {
+			continue
+		}
+		player.SetCommand(basePayload)
+	}
+}
+
+func (d *Deck) DoCmdServerDealCards() {
+	sleepTime := 10
+	takeTime := d.getTakeTime(sleepTime)
+	for _, p := range d.Players {
+		payload := data.CmdServerDealCards{
+			Cards:    p.GetHandCards(),
+			TakeTime: takeTime}
+		payloadStr, _ := helper.ConvertToData(&payload)
+		basePayload := data.BasePayload{
+			CommandAction: data.OnCmdServerDealCards,
+			Data:          payloadStr,
+		}
+		p.SetCommand(&basePayload)
+	}
+	time.Sleep(time.Duration(sleepTime) * time.Second)
+}
+
+func (d *Deck) DoCmdServerGameOver() {
+	sleepTime := 30
+	takeTime := d.getTakeTime(sleepTime)
+	payload := data.CmdServerGameOver{
+		Status:   d.GameRecord.PlayerHandCardCount,
+		TakeTime: takeTime,
+	}
+	payloadStr, _ := helper.ConvertToData(&payload)
+	basePayload := data.BasePayload{
+		CommandAction: data.OnCmdServerGameOver,
+		Data:          payloadStr,
+	}
+	d.sendCommandToPlayers(&basePayload)
+	time.Sleep(time.Duration(sleepTime) * time.Second)
+}
+
+func (d *Deck) DoCmdServerNewRound() {
+	sleepTime := 3
+	takeTime := d.getTakeTime(sleepTime)
+	payload := data.CmdServerNewRound{
+		RoundID:  d.GameRecord.CurrentRound.RoundNo,
+		TakeTime: takeTime,
+	}
+	payloadStr, _ := helper.ConvertToData(&payload)
+	basePayload := data.BasePayload{
+		CommandAction: data.OnCmdServerNewRound,
+		Data:          payloadStr,
+	}
+	d.sendCommandToPlayers(&basePayload)
+	time.Sleep(time.Duration(sleepTime) * time.Second)
+}
+
+func (d *Deck) DoCmdServerCurrentPlayer(currentPlayerID int, replyID string, sleepTime int) {
+	takeTime := d.getTakeTime(sleepTime)
+
+	payload := data.CmdServerCurrentPlayer{
+		ReplyID:  replyID,
+		PlayerID: currentPlayerID,
+		TakeTime: takeTime,
+	}
+	payloadStr, _ := helper.ConvertToData(&payload)
+	basePayload := data.BasePayload{
+		CommandAction: data.OnCmdServerCurrentPlayer,
+		Data:          payloadStr,
+		Target:        "",
+	}
+	d.sendCommandToPlayers(&basePayload)
+}
+
+func (d *Deck) DoCmdServerPlayerAction(action *data.PlayerAction) {
+	sleepTime := 5
+	takeTime := d.getTakeTime(sleepTime)
+	payload := data.CmdServerPlayerAction{
+		PlayerID: action.PlayerID,
+		TakeTime: takeTime,
+	}
+	if action.IsPass {
+		payload.IsPass = true
+	} else {
+		payload.CardType = action.CardType
+		payload.Cards = action.Cards
+	}
+	payloadStr, _ := helper.ConvertToData(&payload)
+	basePayload := data.BasePayload{
+		MainAction:    0,
+		CommandAction: data.OnCmdServerPlayerAction,
+		Data:          payloadStr,
+	}
+	d.sendCommandToPlayers(&basePayload)
+	time.Sleep(time.Duration(sleepTime) * time.Second)
 }

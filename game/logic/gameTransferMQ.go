@@ -2,8 +2,6 @@ package logic
 
 import (
 	"big2backend/infrastructure/rabbitmq"
-	"big2backend/shared/data"
-	"big2backend/shared/helper"
 	"log"
 	"strings"
 
@@ -62,12 +60,13 @@ func (s *GameTransferMQ) Publish(routingKey string, message string, msgID string
 func (s *GameTransferMQ) handler(dev *amqp091.Delivery) {
 	switch true {
 	case strings.HasPrefix(dev.RoutingKey, consts.ROUTING.GAME.FROM_AGENT):
-		s.agentHelper.HandleConnectMessage(dev)
+		s.agentHelper.HandleAgentMessage(dev)
 	case strings.HasPrefix(dev.RoutingKey, consts.ROUTING.GAME.FROM_CONNECTOR):
-		payload, _ := helper.ConvertToObject[data.BasePayload](string(dev.Body))
-		switch payload.CommandAction {
-		case data.OnCmdClientPlayerAction:
-			s.connectorHelper.HandleConnectMessage(dev)
-		}
+		s.connectorHelper.HandleConnectMessage(dev)
+		// payload := helper.ConvertToBasePayload(string(dev.Body))
+		// switch payload.CommandAction {
+		// case data.OnCmdClientPlayerAction:
+
+		// }
 	}
 }

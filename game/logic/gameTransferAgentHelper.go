@@ -17,8 +17,8 @@ func NewGameTransferAgentHelper(transfer *GameTransferMQ) *GameTransferAgentHelp
 	}
 }
 
-func (c *GameTransferAgentHelper)HandleConnectMessage(dev *amqp091.Delivery) {
-	payload,_ := helper.ConvertToObject[data.BasePayload](string(dev.Body))
+func (c *GameTransferAgentHelper)HandleAgentMessage(dev *amqp091.Delivery) {
+	payload := helper.ConvertToBasePayload(string(dev.Body))
 	switch payload.CommandAction {
 	case data.CommandAction(data.InAIPayloadResponse):
 		responseFromAgent(c.Transfer,dev)

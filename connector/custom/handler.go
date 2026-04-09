@@ -1,37 +1,24 @@
 package custom
 
 import (
+	transfermq "big2backend/connector/transferMQ"
 	"big2backend/connector/common"
-	"big2backend/connector/custom/command"
+	"big2backend/shared/consts"
+	"big2backend/shared/data"
+	"big2backend/shared/helper"
 )
 
 func HandleMessage(client *common.Client, message []byte) {
 	println("Received message from client:", string(message))
-	commandName := command.GetCommandName(message)
-	switch commandName {
-	case "say_all":
-		cmd, err := command.GetCommand[command.SayAllCommand](commandName, message)
-		if err != nil {
-			println("Error parsing say_all command:", err.Error())
-			return
-		}
-		sayAll(client, cmd.Message)
-	case "say_to":
-		cmd, err := command.GetCommand[command.SayToCommand](commandName, message)
-		if err != nil {
-			println("Error parsing say_to command:", err.Error())
-			return
-		}
-		sayTo(client, cmd.TargetID, cmd.Message)
-	default:
-		println("Unknown command:", commandName)
+	basePayload := helper.ConvertToBasePayload(string(message))
+	msgID := helper.GetUniqueID()
+	if basePayload.CommandAction == data.OnCmdClientPlayerAction {
+		//payload, _ := helper.ConvertToObject[data.CmdClientPlayerAction](basePayload.Data)
+		transfer := transfermq.GetTransferMQ()
+		transfer.Publish(consts.ROUTING.GAME.FROM_CONNECTOR, string(message), msgID, "")
 	}
-}
-
-func sayAll(client *common.Client, message string) {
-	client.ExtendTunnel.BroadcastMessage([]byte("广播消息: " + message))
-}
-
-func sayTo(client *common.Client, targetID string, message string) {
-	client.ExtendTunnel.SendMessageToClient(targetID, []byte("私聊消息: "+message))
+	if basePayload.CommandAction == data.OnCmdClientReady {
+		transfermq := transfermq.GetTransferMQ()
+		transfermq.Publish(consts.ROUTING.GAME.FROM_CONNECTOR, string(message), msgID, "")
+	}
 }

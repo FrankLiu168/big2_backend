@@ -19,8 +19,7 @@ func NewAgentTransferConnectorHelper(transfer *AITransferMQ) *AgentTransferConne
 }
 
 func (c *AgentTransferConnectorHelper) HandleConnectMessage(dev *amqp091.Delivery) {
-	data.LogD("Agent","ROUTING.AGENT.FROM_CONNECTOR")
-	payload, _ := helper.ConvertToObject[data.BasePayload](string(dev.Body))
+	payload := helper.ConvertToBasePayload(string(dev.Body))
 	switch payload.CommandAction {
 	case data.CommandAction(data.InAIPayloadRequest):
 		replyToConnect(c.Transfer, dev)
@@ -28,17 +27,15 @@ func (c *AgentTransferConnectorHelper) HandleConnectMessage(dev *amqp091.Deliver
 }
 func replyToConnect(transfer *AITransferMQ, dev *amqp091.Delivery) {
 	msgID := helper.GetUniqueID()
-	payload, _ := helper.ConvertToObject[data.BasePayload](string(dev.Body))
-	aiPayload, _ := helper.ConvertToObject[data.AIPayloadRequest](payload.Data)
+	payload := helper.ConvertToBasePayload(string(dev.Body))
+	aiPayload := helper.ConvertToPayload[data.AIPayloadRequest](payload)
 	action := transfer.Agent.Strategy(&aiPayload.GameRecord, &aiPayload.Info)
-	res := data.AIPayloadResponse{Action: *action}
-	resStr, _ := helper.ConvertToData(&res)
-	resPayload := data.BasePayload{CommandAction: data.CommandAction(data.InAIPayloadResponse),
-		Data: resStr}
+	resPayload := data.AIPayloadResponse{Action: *action}
+	str := helper.PackPayload(data.CommandAction(data.InAIPayloadResponse), "", &resPayload)
 	routingKey := consts.ROUTING.CONNECTOR.FROM_AGENT
-	str, _ := helper.ConvertToData(&resPayload)
-	data.LogD("Agent Publish","ROUTING.CONNECTOR.FROM_AGENT",str)
+	
 	transfer.Publish(routingKey, str, msgID, dev.MessageId)
+
 }
 
 func notify(dev *amqp091.Delivery) {

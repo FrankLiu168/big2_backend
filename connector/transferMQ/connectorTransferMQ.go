@@ -1,4 +1,4 @@
-package connector
+package transfermq
 
 import (
 	"big2backend/infrastructure/rabbitmq"
@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"big2backend/shared/consts"
-	"big2backend/shared/data"
 
 	"github.com/rabbitmq/amqp091-go"
 )
@@ -16,6 +15,7 @@ type ConnectorTransferMQ struct {
 	consumer    *rabbitmq.Consumer
 	agentHelper *ConnectorTransferAgentHelper
 	gameHelper  *ConnectorTransferGameHelper
+	connectorHandler func(dev *amqp091.Delivery)
 }
 
 var transferMQ *ConnectorTransferMQ
@@ -60,13 +60,16 @@ func (s *ConnectorTransferMQ) Publish(routingKey string, message string, msgID s
 }
 
 func (s *ConnectorTransferMQ) handler(dev *amqp091.Delivery) {
-	data.LogD("Connector", "收到RoutingKey:", dev.RoutingKey)
 	switch true {
 	case strings.HasPrefix(consts.ROUTING.CONNECTOR.FROM_GAME, dev.RoutingKey):
-		s.gameHelper.HandleConnectMessage(dev)
+		s.connectorHandler(dev)
 
 	case strings.HasPrefix(consts.ROUTING.CONNECTOR.FROM_AGENT, dev.RoutingKey):
-		data.LogD("Connector", "ROUTING.CONNECTOR.FROM_AGENT", "收到")
 		s.agentHelper.HandleConnectMessage(dev)
 	}
+}
+
+func (s *ConnectorTransferMQ)RegisterHandler(handler func(dev *amqp091.Delivery)) {
+	s.connectorHandler = handler
+	s.gameHelper.connectorHandler = handler
 }

@@ -1,15 +1,17 @@
 package connector
 
 import (
+	"big2backend/connector/common"
+	"big2backend/connector/custom"
+	transfermq "big2backend/connector/transferMQ"
+	"big2backend/shared/helper"
 	"fmt"
 	"log"
 	"net/http"
 	"sync"
 
-	"big2backend/connector/common"
-	"big2backend/connector/custom"
-	"big2backend/shared/helper"
 	"github.com/gorilla/websocket"
+	"github.com/rabbitmq/amqp091-go"
 )
 
 var upgrader = websocket.Upgrader{
@@ -24,6 +26,12 @@ var (
 	clients   = make(map[string]*common.Client)
 	clientsMu sync.Mutex
 )
+
+func Init() {
+	server := transfermq.GetTransferMQ()
+	server.Start()
+	server.RegisterHandler(ReceiveFromTransfer)
+}
 
 func DeleteClient(id string) {
 	clientsMu.Lock()
@@ -61,6 +69,15 @@ func SendMessageToClient(clientID string, message []byte) {
 	}
 }
 
+func ReceiveFromTransfer(dev *amqp091.Delivery) {
+	payload := helper.ConvertToBasePayload(string(dev.Body))
+	if payload.Target == "*" {
+		BroadcastMessage(dev.Body)
+	} else {
+		SendMessageToClient(payload.Target, dev.Body)
+	}
+}
+
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -73,9 +90,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := helper.GetUniqueID()
-
-	tunnel := &common.Tunnel{
+	//userID := helper.GetUniqueID()
+	userID := "111"
+	tunnel := &common.ClientTunnel{
 		HandleMessage:       custom.HandleMessage,
 		BroadcastMessage:    BroadcastMessage,
 		SendMessageToClient: SendMessageToClient,

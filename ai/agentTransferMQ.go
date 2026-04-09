@@ -52,6 +52,7 @@ func (s *AITransferMQ) Close() {
 
 func (s *AITransferMQ) Publish(routingKey string, message string, msgID string, replyID string) {
 	s.producer.Publish(routingKey, message, msgID, replyID)
+
 }
 
 func (s *AITransferMQ) handler(dev *amqp091.Delivery) {

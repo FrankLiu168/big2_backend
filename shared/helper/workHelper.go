@@ -65,7 +65,7 @@ func GetConnectorWork() *workHelper {
 }
 
 func newWorkHelper() *workHelper {
-	timeout := 20 * time.Second
+	timeout := 30 * time.Second
 	work := &workHelper{
 		works:   make(map[string]*work),
 		timeout: timeout,

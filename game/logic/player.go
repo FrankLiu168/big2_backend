@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log"
 	"sort"
+	"time"
 )
 
 type Player struct {
@@ -87,31 +88,31 @@ func (p *Player) GetLeftCardCount() int {
 	return len(p.Info.HandCards)
 }
 
-func (p *Player) DoStrategy(gameRecord *data.GameRecord) *data.PlayerAction {
-	payload := data.CmdServerCurrentPlayer{
-		PlayerID:   p.Info.ID,
-		GameRecord: *gameRecord,
+func (p *Player) DoStrategy(replyID string, sleepTime int) *data.PlayerAction {
+	reply, _ := helper.GetWaitHelper().WaitWithTimeout(
+		replyID, time.Duration(sleepTime)*time.Second)
+	resBasePayload := helper.ConvertToBasePayload(reply.Payload)
+	resPayload := helper.ConvertToPayload[data.CmdClientPlayerAction](resBasePayload)
+	action := data.PlayerAction{
+		CardType: resPayload.CardType,
+		Cards:    resPayload.Cards,
+		IsPass:   resPayload.IsPass,
+		PlayerID: p.Info.ID,
 	}
-	payloadStr, _ := helper.ConvertToData(&payload)
-	payloadBase := data.BasePayload{
-		CommandAction: data.OnCmdServerCurrentPlayer,
-		Data:          payloadStr,
-	}
-	baseStr, _ := helper.ConvertToData(&payloadBase)
-	msgID := helper.GetUniqueID()
-	reply, _ := helper.GetGameWork().MakeRequest(msgID, func() {
-		data.LogD("DoStratery Publish","ROUTING.CONNECTOR.FROM_GAME")
-		p.Transfer.Publish(consts.ROUTING.CONNECTOR.FROM_GAME, baseStr, msgID, msgID)
-	})
-	pl, _ := helper.ConvertToObject[data.BasePayload](reply.Payload)
-	pa, _ := helper.ConvertToObject[data.CmdClientPlayerAction](pl.Data)
-	return &data.PlayerAction{
-		PlayerID: pa.PlayerID,
-		IsPass:   pa.IsPass,
-		CardType: pa.CardType,
-		Cards:    pa.Cards,
-		Reason:   pa.Reason,
-	}
+	return &action
+	// reply, _ := helper.GetGameWork().MakeRequest(msgID, func() {
+	// 	data.LogD("DoStratery Publish","ROUTING.CONNECTOR.FROM_GAME")
+	// 	p.Transfer.Publish(consts.ROUTING.CONNECTOR.FROM_GAME, baseStr, msgID, msgID)
+	// })
+	// pl, _ := helper.ConvertToObject[data.BasePayload](reply.Payload)
+	// pa, _ := helper.ConvertToObject[data.CmdClientPlayerAction](pl.Data)
+	// return &data.PlayerAction{
+	// 	PlayerID: pa.PlayerID,
+	// 	IsPass:   pa.IsPass,
+	// 	CardType: pa.CardType,
+	// 	Cards:    pa.Cards,
+	// 	Reason:   pa.Reason,
+	// }
 }
 
 func (p *Player) Strategy(gameRecord *data.GameRecord) *data.PlayerAction {
@@ -123,12 +124,7 @@ func (p *Player) Strategy(gameRecord *data.GameRecord) *data.PlayerAction {
 			GameRecord: *gameRecord,
 			Info:       *p.Info,
 		}
-		payloadStr, _ := helper.ConvertToData(&payload)
-		basePayload := data.BasePayload{
-			CommandAction: data.CommandAction(data.InAIPayloadRequest),
-			Data: payloadStr,
-		}
-		str, _ := helper.ConvertToData(&basePayload)
+		str := helper.PackPayload(data.CommandAction(data.InAIPayloadRequest), "", &payload)
 		server.Publish(consts.ROUTING.AGENT.FROM_GAME, str, msgID, msgID)
 	})
 	if err != nil {
@@ -147,6 +143,7 @@ func (p *Player) SetCommand(command *data.BasePayload) {
 	if p.IsAI {
 		return
 	}
+	command.Target = "111"
 	msgID := helper.GetUniqueID()
 	msg, _ := helper.ConvertToData(command)
 	routingKey := consts.ROUTING.CONNECTOR.FROM_GAME

@@ -12,7 +12,7 @@ type Client struct {
 	Send         chan []byte
 	ID           string
 	DeleteClient func(id string)
-	ExtendTunnel *Tunnel
+	ExtendTunnel *ClientTunnel
 }
 
 func (c *Client) ReadPump() {

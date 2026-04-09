@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"big2backend/shared/data"
 	"fmt"
 	"log"
 	"os"
@@ -127,7 +128,8 @@ func (c *Consumer) Listen(bindingKeys []string, handler func(*amqp091.Delivery))
 	// 在 goroutine 中处理消息
 	go func() {
 		for d := range msgs {
-			handler(&d)
+			data.LogD("consumer",d.RoutingKey)
+			go handler(&d)
 		}
 		log.Println("Message channel closed. Consumer stopped.")
 	}()
