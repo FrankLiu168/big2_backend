@@ -4,38 +4,35 @@ import (
 	"big2backend/shared/consts"
 )
 
-type MainAction int
 type CommandAction int
 
 const (
-	InAIPayloadRequest MainAction = iota + 1
-	InAIPayloadResponse
-)
+	InAIPayloadRequest  CommandAction = 101
+	InAIPayloadResponse CommandAction = 102
 
-const (
-	OnCmdServerCurrentPlayer CommandAction = iota + 1
-	OnCmdServerDealCards
-	OnCmdClientPlayerAction
-	OnCmdClientReady
-	OnCmdServerPlayerAction
-	OnCmdServerGameOver
-	OnCmdServerNewRound
+	OnCmdServerCurrentPlayer CommandAction = 201
+	OnCmdServerDealCards     CommandAction = 202
+	OnCmdServerPlayerAction  CommandAction = 203
+	OnCmdServerGameOver      CommandAction = 204
+	OnCmdServerNewRound      CommandAction = 205
+
+	OnCmdClientPlayerAction CommandAction = 301
+	OnCmdClientReady        CommandAction = 302
 )
 
 type BasePayload struct {
-	MainAction    MainAction    `json : "mainAction"`
-	CommandAction CommandAction `json : "command"`
-	Target        string        `json : "target"`
-	Data          string        `json : "data"`
+	CommandAction CommandAction `json:"commandAction"`
+	Target        string        `json:"target"`
+	Data          string        `json:"data"`
 }
 
 type AIPayloadRequest struct {
-	GameRecord GameRecord `json : "gameRecord"`
-	Info       PlayerInfo `json : "info"`
+	GameRecord GameRecord `json:"gameRecord"`
+	Info       PlayerInfo `json:"info"`
 }
 
 type AIPayloadResponse struct {
-	Action PlayerAction `json : "action"`
+	Action PlayerAction `json:"action"`
 }
 type CmdServerNewRound struct {
 	RoundID  int `json:"roundID"`

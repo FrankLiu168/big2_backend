@@ -28,7 +28,7 @@ func ComparePair(cards1 []int, cards2 []int) bool {
 	rank1 := cards1[1] % 100
 	rank2 := cards2[1] % 100
 	if rank2 == rank1 {
-		return cards2[0] > cards1[0]
+		return cards2[1] > cards1[1]
 	}
 	return CompareSingle(cards1, cards2)
 }

@@ -11,6 +11,7 @@ import (
 func HandleMessage(client *common.Client, message []byte) {
 	println("Received message from client:", string(message))
 	basePayload := helper.ConvertToBasePayload(string(message))
+	println("basePayload:", basePayload.CommandAction)
 	msgID := helper.GetUniqueID()
 	if basePayload.CommandAction == data.OnCmdClientPlayerAction {
 		//payload, _ := helper.ConvertToObject[data.CmdClientPlayerAction](basePayload.Data)
@@ -18,6 +19,7 @@ func HandleMessage(client *common.Client, message []byte) {
 		transfer.Publish(consts.ROUTING.GAME.FROM_CONNECTOR, string(message), msgID, "")
 	}
 	if basePayload.CommandAction == data.OnCmdClientReady {
+		println("send ready")
 		transfermq := transfermq.GetTransferMQ()
 		transfermq.Publish(consts.ROUTING.GAME.FROM_CONNECTOR, string(message), msgID, "")
 	}

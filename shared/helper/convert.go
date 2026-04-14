@@ -44,5 +44,8 @@ func ConvertToData[T any](item *T) (string, error) {
 func GetJsonPart(str string) string {
 	s := strings.Index(str, "{")
 	e := strings.Index(str, "}")
+	if s == -1 || e == -1 {
+		return ""
+	}
 	return str[s : e+1]
 }

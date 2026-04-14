@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"big2backend/shared/consts"
+	"big2backend/shared/data"
 
 	"github.com/rabbitmq/amqp091-go"
 )
@@ -58,6 +59,7 @@ func (s *GameTransferMQ) Publish(routingKey string, message string, msgID string
 }
 
 func (s *GameTransferMQ) handler(dev *amqp091.Delivery) {
+	data.LogD("game received from connector")
 	switch true {
 	case strings.HasPrefix(dev.RoutingKey, consts.ROUTING.GAME.FROM_AGENT):
 		s.agentHelper.HandleAgentMessage(dev)

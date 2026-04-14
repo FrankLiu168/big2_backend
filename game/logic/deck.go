@@ -236,7 +236,6 @@ func (d *Deck) DoCmdServerPlayerAction(action *data.PlayerAction) {
 	}
 	payloadStr, _ := helper.ConvertToData(&payload)
 	basePayload := data.BasePayload{
-		MainAction:    0,
 		CommandAction: data.OnCmdServerPlayerAction,
 		Data:          payloadStr,
 	}
