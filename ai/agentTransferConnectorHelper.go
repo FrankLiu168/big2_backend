@@ -31,7 +31,7 @@ func replyToConnect(transfer *AITransferMQ, dev *amqp091.Delivery) {
 	aiPayload := helper.ConvertToPayload[data.AIPayloadRequest](payload)
 	action := transfer.Agent.Strategy(&aiPayload.GameRecord, &aiPayload.Info)
 	resPayload := data.AIPayloadResponse{Action: *action}
-	str := helper.PackPayload(data.CommandAction(data.InAIPayloadResponse), "", &resPayload)
+	str := helper.PackPayload(data.CommandAction(data.InAIPayloadResponse),99, "", &resPayload)
 	routingKey := consts.ROUTING.CONNECTOR.FROM_AGENT
 	
 	transfer.Publish(routingKey, str, msgID, dev.MessageId)

@@ -37,6 +37,8 @@ func startByServerCommand() {
 	go entrycmd.StartAI()
 	go entrycmd.StartConnector()
 	entrycmd.StartGame()
+	ch := make(chan bool)
+	<-ch
 }
 func startByClientCommand() {
 	entrycmd.StartClient()
@@ -90,7 +92,7 @@ func startGame() {
 	p3 := logic.NewPlayer(3, "Player3", true, logicServer)
 	p4 := logic.NewPlayer(4, "Player4", true, logicServer)
 	players := []logic.Player{*p1, *p2, *p3, *p4}
-	deck.Init(players, logicServer)
+	deck.Init(players, nil,logicServer)
 	deck.StartGame()
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal("ListenAndServe: ", err)

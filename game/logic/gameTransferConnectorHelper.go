@@ -8,7 +8,8 @@ import (
 )
 
 type GameTransferConnectorHelper struct {
-	Transfer *GameTransferMQ
+	Transfer     *GameTransferMQ
+	GameListener func(string)
 }
 
 func NewGameTransferConnectorHelper(transfer *GameTransferMQ) *GameTransferConnectorHelper {
@@ -18,32 +19,32 @@ func NewGameTransferConnectorHelper(transfer *GameTransferMQ) *GameTransferConne
 }
 
 func (c *GameTransferConnectorHelper) HandleConnectMessage(dev *amqp091.Delivery) {
-	payload := helper.ConvertToBasePayload(string(dev.Body))
-	data.LogD("GameTransferConnectorHelper",string(dev.Body))
-	switch payload.CommandAction {
-	case data.CommandAction(data.OnCmdClientPlayerAction):
+	cnnPayload := helper.ConvertToConnectorPayload(string(dev.Body))
+	data.LogD("GameTransferConnectorHelper", string(dev.Body))
+	switch cnnPayload.Data.CommandAction {
+	case data.OnCmdClientPlayerAction:
 		handleConnectorAction(c.Transfer, dev)
-	case data.OnCmdClientReady:
-		res := helper.ConvertToPayload[data.CmdClientReady](payload)
-		data.LogD("---unlock wait----",res.ReplyID)
-		helper.GetWaitHelper().Reply(res.ReplyID, string(dev.Body))
+	default:
+		c.GameListener(string(dev.Body))
 	}
 }
 
+func (c *GameTransferConnectorHelper) SetGameListener(listener func(string)) {
+	c.GameListener = listener
+}
+
 func handleConnectorAction(transfer *GameTransferMQ, dev *amqp091.Delivery) {
-	basePayload := helper.ConvertToBasePayload(string(dev.Body))
-	switch basePayload.CommandAction {
+	print("handleConnectorAction", string(dev.Body))
+	cnnPayload := helper.ConvertToConnectorPayload(string(dev.Body))
+	print("\n +++++ handleConnectorAction \n")
+	switch cnnPayload.Data.CommandAction {
 	case data.OnCmdClientPlayerAction:
-		payload := helper.ConvertToPayload[data.CmdClientPlayerAction](basePayload)
+		//print("data",basePayload.Data)
+		payload := helper.ConvertToClientPayload[data.CmdClientPlayerAction](&cnnPayload.Data)
 		replyID := payload.ReplyID
 		helper.GetWaitHelper().Reply(replyID, string(dev.Body))
 	}
 
 }
 
-// func responseFromConnector(transfer *GameTransferMQ,dev *amqp091.Delivery) {
-// 	replyID, isExist := dev.Headers["replyID"]
-// 	if isExist && replyID != "" {
-// 		helper.GetGameWork().Reply(replyID.(string), string(dev.Body))
-// 	}
-// }
+

@@ -142,10 +142,8 @@ func (c *Client) Handler(msg string) {
 
 func (c *Client) SendReadyCommand() {
 	payload := data.CmdClientReady{
-		PlayerID: 1,
-		ReplyID:  "12345",
 	}
-	str := helper.PackPayload(data.OnCmdClientReady, "", &payload)
+	str := helper.PackPayload(data.OnCmdClientReady, 0, "", &payload)
 	c.WriteMessage(1, []byte(str))
 }
 
@@ -169,7 +167,7 @@ func (c *Client) SendActionCommand(isPass string, cardType string, cards string)
 		payload.Cards = css
 	}
 
-	str := helper.PackPayload(data.OnCmdClientPlayerAction, "", &payload)
+	str := helper.PackPayload(data.OnCmdClientPlayerAction, 0, "", &payload)
 	data.LogD("send to server", str)
 	c.WriteMessage(1, []byte(str))
 }

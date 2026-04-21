@@ -15,6 +15,14 @@ type Client struct {
 	ExtendTunnel *ClientTunnel
 }
 
+func (c *Client) CheckStatus() {
+	err := c.Conn.WriteMessage(websocket.PingMessage, nil) 
+	if err != nil {
+		log.Printf("[警告] 发送心跳包失败: %v", err)
+		c.DeleteClient(c.ID)
+	}
+}
+
 func (c *Client) ReadPump() {
 	defer func() {
 		c.DeleteClient(c.ID)

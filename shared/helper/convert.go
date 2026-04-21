@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+func ConvertToConnectorPayload(str string) *data.ConnectorPayload {
+	connectorPayload, _ := ConvertToObject[data.ConnectorPayload](str)
+	return connectorPayload
+}
+
 func ConvertToBasePayload(str string) *data.BasePayload {
 	basePayload, _ := ConvertToObject[data.BasePayload](str)
 	return basePayload
@@ -15,11 +20,16 @@ func ConvertToPayload[T1 any](basePayload *data.BasePayload) *T1 {
 	payload, _ := ConvertToObject[T1](basePayload.Data)
 	return payload
 }
-
-func PackPayload[T1 any](commandAction data.CommandAction, target string, payload *T1) string {
+func ConvertToClientPayload[T1 any](basePayload *data.ClientBasePayload) *T1 {
+	payload, _ := ConvertToObject[T1](basePayload.Data)
+	return payload
+}
+func PackPayload[T1 any](commandAction data.CommandAction, commandSubAction int,
+	target string, payload *T1) string {
 	basePayload := data.BasePayload{
-		CommandAction: commandAction,
-		Target:        target,
+		CommandAction:    commandAction,
+		CommandSubAction: commandSubAction,
+		Target:           target,
 	}
 	cmdPayload, _ := ConvertToData(payload)
 	basePayload.Data = cmdPayload

@@ -1,11 +1,11 @@
 package logic
 
 import (
+	cardrule "big2backend/shared/cardRule"
 	"big2backend/shared/consts"
 	"big2backend/shared/data"
 	"big2backend/shared/helper"
 	"encoding/json"
-	"log"
 	"sort"
 	"time"
 )
@@ -15,6 +15,7 @@ type Player struct {
 	Identifier string
 	Info       *data.PlayerInfo
 	Transfer   *GameTransferMQ
+	IsOnGame   bool
 }
 
 func NewPlayer(id int, name string, isAI bool, transfer *GameTransferMQ) *Player {
@@ -88,11 +89,18 @@ func (p *Player) GetLeftCardCount() int {
 	return len(p.Info.HandCards)
 }
 
-func (p *Player) DoStrategy(replyID string, sleepTime int) *data.PlayerAction {
-	reply, _ := helper.GetWaitHelper().WaitWithTimeout(
+func (p *Player) DoStrategy(isFirst bool, replyID string, sleepTime int) *data.PlayerAction {
+	reply, err := helper.GetWaitHelper().WaitWithTimeout(
 		replyID, time.Duration(sleepTime)*time.Second)
-	resBasePayload := helper.ConvertToBasePayload(reply.Payload)
-	resPayload := helper.ConvertToPayload[data.CmdClientPlayerAction](resBasePayload)
+	if err != nil {
+		if isFirst {
+			return p.GetMinCardAction()
+		} else {
+			return p.GetPass()
+		}
+	}
+	cnnPayload := helper.ConvertToConnectorPayload(reply.Payload)
+	resPayload := helper.ConvertToClientPayload[data.CmdClientPlayerAction](&cnnPayload.Data)
 	action := data.PlayerAction{
 		CardType: resPayload.CardType,
 		Cards:    resPayload.Cards,
@@ -100,19 +108,6 @@ func (p *Player) DoStrategy(replyID string, sleepTime int) *data.PlayerAction {
 		PlayerID: p.Info.ID,
 	}
 	return &action
-	// reply, _ := helper.GetGameWork().MakeRequest(msgID, func() {
-	// 	data.LogD("DoStratery Publish","ROUTING.CONNECTOR.FROM_GAME")
-	// 	p.Transfer.Publish(consts.ROUTING.CONNECTOR.FROM_GAME, baseStr, msgID, msgID)
-	// })
-	// pl, _ := helper.ConvertToObject[data.BasePayload](reply.Payload)
-	// pa, _ := helper.ConvertToObject[data.CmdClientPlayerAction](pl.Data)
-	// return &data.PlayerAction{
-	// 	PlayerID: pa.PlayerID,
-	// 	IsPass:   pa.IsPass,
-	// 	CardType: pa.CardType,
-	// 	Cards:    pa.Cards,
-	// 	Reason:   pa.Reason,
-	// }
 }
 
 func (p *Player) Strategy(gameRecord *data.GameRecord) *data.PlayerAction {
@@ -124,12 +119,15 @@ func (p *Player) Strategy(gameRecord *data.GameRecord) *data.PlayerAction {
 			GameRecord: *gameRecord,
 			Info:       *p.Info,
 		}
-		str := helper.PackPayload(data.CommandAction(data.InAIPayloadRequest), "", &payload)
+		str := helper.PackPayload(data.CommandAction(data.InAIPayloadRequest), 0, "", &payload)
 		server.Publish(consts.ROUTING.AGENT.FROM_GAME, str, msgID, msgID)
 	})
 	if err != nil {
-		log.Println("Error:", err)
-		return nil
+		if gameRecord.CurrentRound.IsFirst {
+			return p.GetMinCardAction()
+		} else {
+			return p.GetPass()
+		}
 	}
 	baseRes := data.BasePayload{}
 	_ = json.Unmarshal([]byte(reply.Payload), &baseRes)
@@ -139,11 +137,40 @@ func (p *Player) Strategy(gameRecord *data.GameRecord) *data.PlayerAction {
 	return &res.Action
 }
 
+func (p *Player) GetPass() *data.PlayerAction {
+	return &data.PlayerAction{
+		PlayerID: p.Info.ID,
+		IsPass:   true,
+	}
+}
+
+func (p *Player) GetMinCardAction() *data.PlayerAction {
+	handCards := p.GetHandCards()
+	minCard := 0
+	for _, card := range handCards {
+		if minCard == 0 {
+			minCard = card
+		} else {
+			b := cardrule.CompareSingle([]int{minCard}, []int{card})
+			if b {
+				minCard = card
+			}
+		}
+	}
+	action := data.PlayerAction{
+		CardType: consts.CARD_TYPE_SINGLE,
+		Cards:    []int{minCard},
+		IsPass:   false,
+		PlayerID: p.Info.ID,
+	}
+	return &action
+}
+
 func (p *Player) SetCommand(command *data.BasePayload) {
 	if p.IsAI {
 		return
 	}
-	command.Target = "111"
+	command.Target = p.Identifier
 	msgID := helper.GetUniqueID()
 	msg, _ := helper.ConvertToData(command)
 	routingKey := consts.ROUTING.CONNECTOR.FROM_GAME

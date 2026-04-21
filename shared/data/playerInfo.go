@@ -12,3 +12,11 @@ func NewPlayerInfo(id int, name string) *PlayerInfo {
 		Name: name,
 	}
 }
+
+type PlayerData struct {
+	Identifier string `json:"identifier"`
+	PlayerID   int    `json:"playerID"`
+	PlayerName string `json:"playerName"`
+	IsReady    bool   `json:"isReady"`
+	IsOnline   bool   `json:"isOnline"`
+}

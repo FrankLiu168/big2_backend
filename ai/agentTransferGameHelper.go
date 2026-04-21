@@ -32,7 +32,7 @@ func replyToPlayer(transfer *AITransferMQ, dev *amqp091.Delivery) {
 	aiPayload := helper.ConvertToPayload[data.AIPayloadRequest](payload)
 	action := transfer.Agent.Strategy(&aiPayload.GameRecord, &aiPayload.Info)
 	res := data.AIPayloadResponse{Action: *action}
-	resStr := helper.PackPayload(data.CommandAction(data.InAIPayloadResponse), "", &res)
+	resStr := helper.PackPayload(data.CommandAction(data.InAIPayloadResponse), 99, "", &res)
 
 	routingKey := consts.ROUTING.GAME.FROM_AGENT
 	transfer.Publish(routingKey, resStr, msgID, dev.MessageId)

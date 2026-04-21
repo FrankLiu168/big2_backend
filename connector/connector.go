@@ -4,6 +4,8 @@ import (
 	"big2backend/connector/common"
 	"big2backend/connector/custom"
 	transfermq "big2backend/connector/transferMQ"
+	"big2backend/shared/consts"
+	"big2backend/shared/data"
 	"big2backend/shared/helper"
 	"fmt"
 	"log"
@@ -30,7 +32,8 @@ var (
 func Init() {
 	server := transfermq.GetTransferMQ()
 	server.Start()
-	server.RegisterHandler(ReceiveFromTransfer)
+	//server.RegisterHandler(ReceiveFromTransfer)
+	server.SetTunnel(ReceiveFromTransfer)
 }
 
 func DeleteClient(id string) {
@@ -40,6 +43,21 @@ func DeleteClient(id string) {
 		client.Conn.Close()
 		delete(clients, id)
 		fmt.Printf("用户 %s 已删除\n", id)
+		cliPayload := data.ClientBasePayload{
+			CommandAction: data.OnCmdConnectOffline,
+			Data:          "{}",
+			RoomID:        0,
+			GameID:        "",
+			IsBroadcast:   true,
+		}
+		cnnPayload := data.ConnectorPayload{
+			Data:       cliPayload,
+			Identifier: id,
+		}
+		str, _ := helper.ConvertToData(&cnnPayload)
+		msgID := helper.GetUniqueID()
+		server := transfermq.GetTransferMQ()
+		server.Publish(consts.ROUTING.GAME.FROM_CONNECTOR, str, msgID, "")
 	}
 }
 
@@ -70,10 +88,12 @@ func SendMessageToClient(clientID string, message []byte) {
 }
 
 func ReceiveFromTransfer(dev *amqp091.Delivery) {
+	print("\n +++++ ReceiveFromTransfer \n")
 	payload := helper.ConvertToBasePayload(string(dev.Body))
-	if payload.Target == "*" {
+	if payload.Target == "" {
 		BroadcastMessage(dev.Body)
 	} else {
+		print("---- send to client ----")
 		SendMessageToClient(payload.Target, dev.Body)
 	}
 }
@@ -91,7 +111,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//userID := helper.GetUniqueID()
-	userID := "111"
+	userID := "user-1"
 	tunnel := &common.ClientTunnel{
 		HandleMessage:       custom.HandleMessage,
 		BroadcastMessage:    BroadcastMessage,

@@ -17,13 +17,43 @@ const (
 	OnCmdServerNewRound      CommandAction = 205
 
 	OnCmdClientPlayerAction CommandAction = 301
-	OnCmdClientReady        CommandAction = 302
+	OnCmdClientOnGame       CommandAction = 302
+
+	OnCmdServerRoomInfo  CommandAction = 401
+	OnCmdServerToStart   CommandAction = 402
+	OnCmdServerEnterFail CommandAction = 403
+
+	OnCmdClientEnterRoom CommandAction = 501
+	OnCmdClientReady     CommandAction = 502
+	OnCmdClientCancel    CommandAction = 503
+	OnCmdClientLeaveRoom CommandAction = 504
+
+	OnCmdConnectOffline CommandAction = 601
 )
 
-type BasePayload struct {
+const (
+	ToGame = 0
+	ToRoom = 1
+)
+
+type ConnectorPayload struct {
+	Identifier string            `json:"identifier"`
+	Data       ClientBasePayload `json:"data"`
+}
+
+type ClientBasePayload struct {
 	CommandAction CommandAction `json:"commandAction"`
-	Target        string        `json:"target"`
 	Data          string        `json:"data"`
+	RoomID        int           `json:"roomID"`
+	GameID        string        `json:"gameID"`
+	IsBroadcast   bool          `json:"isBroadcast"`
+}
+
+type BasePayload struct {
+	CommandAction    CommandAction `json:"commandAction"`
+	CommandSubAction int           `json:"commandSubAction"`
+	Target           string        `json:"target"`
+	Data             string        `json:"data"`
 }
 
 type AIPayloadRequest struct {
@@ -34,19 +64,43 @@ type AIPayloadRequest struct {
 type AIPayloadResponse struct {
 	Action PlayerAction `json:"action"`
 }
+
+type CmdConnectOffline struct {
+}
+
+type CmdClientReady struct {
+}
+
+type CmdClientCancel struct {
+}
+
+type CmdClientEnterRoom struct {
+}
+
+type CmdClientLeaveRoom struct {
+}
+
+type CmdServerRoomInfo struct {
+	Players []PlayerData `json:"players"`
+}
+
+type CmdServerToStart struct {
+	GameID string `json:"gameID"`
+}
+
+type CmdServerEnterFail struct {
+	FailID int `json:"failID"`
+}
+
 type CmdServerNewRound struct {
 	RoundID  int `json:"roundID"`
 	TakeTime int `json:"takeTime"`
 }
 
-type CmdClientReady struct {
-	PlayerID int    `json:"playerID"`
-	ReplyID  string `json:"replyID"`
-}
-
 type CmdServerDealCards struct {
-	Cards    []int `json:"cards"`
-	TakeTime int   `json:"takeTime"`
+	Players  []PlayerData `json:"players"`
+	Cards    []int        `json:"cards"`
+	TakeTime int          `json:"takeTime"`
 }
 
 type CmdServerCurrentPlayer struct {
@@ -73,7 +127,10 @@ type CmdServerPlayerAction struct {
 	TakeTime int             `json:"takeTime"`
 }
 
+type CmdClientOnGame struct {
+}
+
 type CmdServerGameOver struct {
-	Status   map[int]int `json:"status"`
-	TakeTime int         `json:"takeTime"`
+	Status   map[string]int `json:"status"`
+	TakeTime int            `json:"takeTime"`
 }

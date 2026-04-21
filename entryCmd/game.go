@@ -21,12 +21,15 @@ func init() {
 func StartGame() {
 	logicServer := logic.GetTransferMQ()
 	logicServer.Start()
-	deck := &logic.Deck{}
-	p1 := logic.NewPlayer(1, "Player1", false, logicServer)
-	p2 := logic.NewPlayer(2, "Player2", true, logicServer)
-	p3 := logic.NewPlayer(3, "Player3", true, logicServer)
-	p4 := logic.NewPlayer(4, "Player4", true, logicServer)
-	players := []logic.Player{*p1, *p2, *p3, *p4}
-	deck.Init(players, logicServer)
-	deck.StartGame()
+	mainGame := logic.NewMainGame(logicServer)
+	mainGame.Init()
+	mainGame.Start()
+	//deck := &logic.Deck{}
+	//p1 := logic.NewPlayer(1, "Player1", false, logicServer)
+	//p2 := logic.NewPlayer(2, "Player2", true, logicServer)
+	//p3 := logic.NewPlayer(3, "Player3", true, logicServer)
+	//p4 := logic.NewPlayer(4, "Player4", true, logicServer)
+	//players := []logic.Player{*p1, *p2, *p3, *p4}
+	//deck.Init(players, logicServer)
+	//deck.StartGame()
 }
